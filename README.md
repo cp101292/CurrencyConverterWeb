@@ -1,6 +1,6 @@
 # CurrencyConverterWeb
 #CurrencyConverter
-#Prerequisites:
+#Prerequisites
 #Install .NET Core 6.0 SDK.
 #Getting Started:
 #Clone or download the source code from the repository.
