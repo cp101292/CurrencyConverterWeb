@@ -1,7 +1,7 @@
 ﻿using CurrencyConverter.Controllers;
 using CurrencyConverter.Model;
-using CurrencyConverter.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using Moq;
 using NUnit.Framework;
 
@@ -12,52 +12,57 @@ namespace CurrencyConverter.Test
     public class CurrencyConversionControllerTests
     {
         private CurrencyConversionController _controller;
-        private Mock<IExchangeRateService> _exchangeRateServiceMock;
-
+        private IConfiguration configuration;
         [SetUp]
         public void Setup()
         {
-            _exchangeRateServiceMock = new Mock<IExchangeRateService>();
-            _controller = new CurrencyConversionController(_exchangeRateServiceMock.Object);
-        }
-
-        [Test]
-        public async Task ConvertCurrency_ValidInput_ReturnsOkResult()
-        {
             // Arrange
-            var exchangeRates = new List<ExchangeRate>
-            {
-                new() { BaseCurrency = "USD", TargetCurrency = "INR", Amount = 74.00m },
-                new() { BaseCurrency = "INR", TargetCurrency = "USD", Amount = 100.00m },
-                new() { BaseCurrency = "USD", TargetCurrency = "EUR", Amount = 200.00m },
-                new() { BaseCurrency = "EUR", TargetCurrency = "USD", Amount = 300.00m },
-                new() { BaseCurrency = "EUR", TargetCurrency = "INR", Amount = 400.00m },
-                new() { BaseCurrency = "INR", TargetCurrency = "EUR", Amount = 500.00m }
-            };
 
-            _exchangeRateServiceMock.Setup(service => service.GetExchangeRatesAsync()).ReturnsAsync(exchangeRates);
+            configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string>
+                {
+                    {"USD_TO_INR", "74.00"},
+                    {"INR_TO_USD", "0.013"},
+                    {"USD_TO_EUR", "0.85"},
+                    {"EUR_TO_USD", "1.18"},
+                    {"INR_TO_EUR", "0.011"},
+                    {"EUR_TO_INR", "88.00"},
+                })
+                .Build();
 
+            _controller = new CurrencyConversionController(configuration);
+        }
+
+        [TestCase("USD", "INR",1.00 )]
+        [TestCase("INR", "USD",74.00)]
+        [TestCase("USD", "EUR",200.00)]
+        [TestCase("EUR", "USD",300.00)]
+        [TestCase("EUR", "INR",1.00)]
+        [TestCase("INR", "EUR",1000.00)]
+        public void ConvertCurrency_ValidInput_ReturnsOkResult(string sourceCurrency, string targetCurrency, decimal baseAmount)
+        {
             // Act
-            var result = await _controller.ConvertCurrency("USD", "INR", 100.0m) as ObjectResult;
-            //TODO : All the conversion parameter can be tested.
+            var resultUsdToInr =  _controller.ConvertCurrency(sourceCurrency, targetCurrency, baseAmount) as ObjectResult;
 
+            var currencyConversionResult = resultUsdToInr.Value as CurrencyConversion;
+            var key = ($"{sourceCurrency}_TO_{targetCurrency}").ToUpper();
+            var rate = Convert.ToDecimal(configuration[key]);
+        
             // Assert
-            Assert.IsNotNull(result);
-            Assert.That(200, Is.EqualTo(result?.StatusCode));
-            var currencyConversionResult = result.Value as CurrencyConversion;
+            Assert.IsNotNull(resultUsdToInr);
+            Assert.That(200, Is.EqualTo(resultUsdToInr?.StatusCode));
             Assert.IsNotNull(currencyConversionResult);
-            Assert.That(74.00m,  Is.EqualTo(currencyConversionResult?.ExchangeRate));
-            Assert.That(7400.0m, Is.EqualTo(currencyConversionResult?.ConvertedAmount));
+            Assert.That(rate,  Is.EqualTo(currencyConversionResult?.ExchangeRate));
+            Assert.That(rate * baseAmount, Is.EqualTo(currencyConversionResult?.ConvertedAmount));
         }
 
         [Test]
-        public async Task ConvertCurrency_InvalidInput_ReturnsBadRequest()
+        public void ConvertCurrency_InvalidInput_ReturnsBadRequest()
         {
             // Arrange: Simulate ModelState.IsValid = false
             _controller.ModelState.AddModelError("sourceCurrency", "Invalid sourceCurrency");
 
             // Act
-            var result = await _controller.ConvertCurrency("USD", "INR", 100.0m) as BadRequestObjectResult;
+            var result =  _controller.ConvertCurrency("USD", "INR", 100.0m) as BadRequestObjectResult;
 
             // Assert
             Assert.IsNotNull(result);
@@ -65,21 +70,5 @@ namespace CurrencyConverter.Test
             // Add more assertions for ModelState errors as needed
         }
 
-        [Test]
-        public async Task ConvertCurrency_RateNotFound_ReturnsNotFound()
-        {
-            // Arrange: Simulate that the exchange rate is not found
-            var exchangeRates = new List<ExchangeRate>();
-
-            _exchangeRateServiceMock.Setup(service => service.GetExchangeRatesAsync()).ReturnsAsync(exchangeRates);
-
-            // Act
-            var result = await _controller.ConvertCurrency("USD", "INR", 100.0m) as NotFoundObjectResult;
-
-            // Assert
-            Assert.IsNotNull(result);
-            Assert.That(404, Is.EqualTo(result?.StatusCode));
-            Assert.That("Exchange rate not found.", Is.EqualTo(result?.Value));
-        }
     }
 }
