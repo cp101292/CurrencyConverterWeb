@@ -26,8 +26,7 @@ namespace CurrencyConverter.Controllers
 
                 var key = ($"{sourceCurrency}_TO_{targetCurrency}").ToUpper();
                 var rate = Convert.ToDecimal(_configuration[key]);
-                    //_exchangeRates.SingleOrDefault(r => r.BaseCurrency == sourceCurrency && r.TargetCurrency == targetCurrency)?.Amount;
-                    
+                     
                 var convertedAmount = amount * rate;
                 var result = new CurrencyConversion
                 {
