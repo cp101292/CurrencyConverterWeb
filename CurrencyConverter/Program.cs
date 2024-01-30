@@ -21,7 +21,7 @@ var app = builder.Build();
 app.UseSwagger();
 app.UseSwaggerUI(c =>
     {
-        c.SwaggerEndpoint("/swagger/swagger.json", "Currency Converter API");
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Currency Converter API");
         c.RoutePrefix = string.Empty; // Do not want to use any route prefix.
     });
 
