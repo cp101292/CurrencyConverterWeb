@@ -1,10 +1,12 @@
 using CurrencyConverter.MiddleWare;
+using CurrencyConverter.Service;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Configuration.AddJsonFile("exchangeRates.json", false, true);
 builder.Configuration.AddEnvironmentVariables();
+builder.Services.AddTransient<ICurrencyConversionService, CurrencyConversionService>();
 
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle

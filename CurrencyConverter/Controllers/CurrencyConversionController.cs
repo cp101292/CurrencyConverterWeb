@@ -1,4 +1,5 @@
 ﻿using CurrencyConverter.Model;
+using CurrencyConverter.Service;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CurrencyConverter.Controllers
@@ -7,11 +8,11 @@ namespace CurrencyConverter.Controllers
     [Route("[controller]")]
     public class CurrencyConversionController : ControllerBase
     {
-        private readonly IConfiguration _configuration;
+        private readonly ICurrencyConversionService _conversionService;
 
-        public CurrencyConversionController(IConfiguration configuration)
+        public CurrencyConversionController(ICurrencyConversionService conversionService)
         {
-            _configuration = configuration;
+            _conversionService = conversionService;
         }
 
         [HttpGet("convert")]
@@ -24,24 +25,13 @@ namespace CurrencyConverter.Controllers
                     return BadRequest(ModelState);
                 }
 
-                var key = ($"{sourceCurrency}_TO_{targetCurrency}").ToUpper();
-                var rate = Convert.ToDecimal(_configuration[key]);
-                     
-                var convertedAmount = amount * rate;
-                var result = new CurrencyConversion
-                {
-                    ExchangeRate = rate,
-                    ConvertedAmount = convertedAmount
-                };
-
+                var result = _conversionService.ConvertCurrency(sourceCurrency, targetCurrency, amount);
                 return Ok(result);
             }
             catch (Exception ex)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while processing your request."+ex);
+                return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while processing your request." + ex);
             }
-
         }
     }
-
 }
